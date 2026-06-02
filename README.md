@@ -1,73 +1,87 @@
-# React + TypeScript + Vite
+# Beszel Public Panel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+## Screenshots
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+<p align="center">
+  <img src="./images/home.png" alt="Home page" width="800" />
+</p>
 
-## React Compiler
+<p align="center">
+  <img src="./images/detail-1.png" alt="Detail Page 1" width="400" />
+  <img src="./images/detail-2.png" alt="Detail Page 2" width="400" />
+</p>
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Architecture
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+This project uses a **Dual-Service Architecture**:
+1. **Frontend**: A React SPA that provides a fluid, low-latency monitoring experience.
+2. **Backend Proxy**: A lightweight Node.js service that handles Beszel authentication and data sanitization. This prevents your admin/readonly password from being visible in the client-side code.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Prerequisites
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- **Node.js**: v20.x.x or higher
+- **Docker & Docker Compose**: (Optional, for easy deployment)
+- **Beszel Account**: A read-only (recommended) or admin account from your Beszel instance.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Option 1: Local Development
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. **Clone the Repo**
+   ```bash
+   git clone https://github.com/shawngao-org/beszel-public-panel.git
+   cd beszel-public-panel
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   npm install && cd server && npm install && cd ..
+   ```
+
+3. **Configure Environment**
+   Create a `.env` file in the root directory (refer to `.env.example`).
+
+4. **Launch**
+   ```bash
+   npm run dev
+   ```
+   *Frontend: http://localhost:5173 | Proxy: http://localhost:3001*
+
+### Option 2: Docker Deployment (Recommended)
+
+1. **Configure Environment**
+   Edit `docker-compose-local.yml` and fill in your variables.
+
+2. **Deploy**
+   ```bash
+   docker-compose -f docker-compose-local.yml up --build -d
+   ```
+   *Access your panel at http://localhost:3001*
+
+---
+
+## Environment Variables
+
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `VITE_PB_URL` | Your Beszel PocketBase URL | `https://beszel.yourdomain.com` |
+| `VITE_PB_USER` | Beszel account email | `readonly@example.com` |
+| `VITE_PB_PASS` | Beszel account password | `yourpassword123` |
+| `VITE_API_URL` | Frontend link to the proxy | `http://localhost:3001` |
+| `VITE_HIDE_IP` | Mask real server IPs (Privacy) | `true` (Recommended) |
+
+---
+
+## Contributing
+
+Contributions are welcome! If you find a bug or have a feature request, please open an issue or submit a pull request.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
