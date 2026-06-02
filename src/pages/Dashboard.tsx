@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, Activity, Globe, Loader2, Thermometer, Database } from 'lucide-react'
+import { LayoutDashboard, Activity, Globe, Loader2, Thermometer } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'

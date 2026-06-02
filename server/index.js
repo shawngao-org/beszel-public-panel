@@ -16,14 +16,9 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-app.get('/api/debug/containers', async (req, res) => {
-  try {
-    await authenticate();
-    const list = await pb.collection('container_stats').getList(1, 1);
-    res.json(list.items[0] || { message: 'No container stats found' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Beszel Proxy is running' });
 });
 
 const pb = new PocketBase(process.env.VITE_PB_URL || 'http://127.0.0.1:8090');
@@ -75,10 +70,7 @@ app.get('/api/systems', async (req, res) => {
     const hideIp = process.env.VITE_HIDE_IP === 'true';
     
     const systems = await Promise.all(records.map(async (system) => {
-      // Mask IP if enabled
-      if (hideIp) {
-        system.host = '***.***.***.***';
-      }
+      if (hideIp) system.host = '***.***.***.***';
       
       let stats = system.stats || null;
       let recentHistory = [];
@@ -94,7 +86,6 @@ app.get('/api/systems', async (req, res) => {
           sort: '-created',
         });
 
-        // Try to get corresponding container stats for the latest record
         let dockerCurrent = { cpu: 0, net_in: 0, net_out: 0 };
         try {
           const cStat = await pb.collection('container_stats').getFirstListItem(`system = "${system.id}"`, { sort: '-created' });
@@ -114,7 +105,6 @@ app.get('/api/systems', async (req, res) => {
 
       if (stats) {
         const temperature = sanitizeTemperature(system.info?.sv) || sanitizeTemperature(stats.t) || sanitizeTemperature(stats.temp);
-
         return {
           ...system,
           details: {
@@ -138,7 +128,6 @@ app.get('/api/systems', async (req, res) => {
       }
       return { ...system, details, history: recentHistory };
     }));
-
     res.json(systems);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -148,30 +137,17 @@ app.get('/api/systems', async (req, res) => {
 app.get('/api/systems/:id/history', async (req, res) => {
   try {
     await authenticate();
-    
-    // Fetch both system and container stats
     const [systemRecords, containerRecords] = await Promise.all([
-      pb.collection('system_stats').getList(1, 100, {
-        filter: `system = "${req.params.id}"`,
-        sort: '-created',
-      }),
-      pb.collection('container_stats').getList(1, 100, {
-        filter: `system = "${req.params.id}"`,
-        sort: '-created',
-      })
+      pb.collection('system_stats').getList(1, 100, { filter: `system = "${req.params.id}"`, sort: '-created' }),
+      pb.collection('container_stats').getList(1, 100, { filter: `system = "${req.params.id}"`, sort: '-created' })
     ]);
 
-    // Create a lookup for container stats by date (truncated to minute/seconds)
     const containerMap = new Map();
-    containerRecords.items.forEach(c => {
-      // Use created time as key
-      containerMap.set(c.created, aggregateContainerStats(c));
-    });
+    containerRecords.items.forEach(c => containerMap.set(c.created, aggregateContainerStats(c)));
 
     const history = systemRecords.items.map(record => {
       const stats = record.stats || {};
       const docker = containerMap.get(record.created) || { cpu: 0, net_in: 0, net_out: 0 };
-      
       const item = {
         time: new Date(record.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         cpu: stats.cpu || 0,
@@ -189,7 +165,6 @@ app.get('/api/systems/:id/history', async (req, res) => {
         docker_net_in: docker.net_in,
         docker_net_out: docker.net_out,
       };
-
       const rawTemp = stats.t || stats.temp || {};
       if (typeof rawTemp === 'object' && rawTemp !== null) {
         Object.entries(rawTemp).forEach(([key, val]) => {
@@ -198,11 +173,20 @@ app.get('/api/systems/:id/history', async (req, res) => {
       }
       return item;
     });
-
     res.json(history.reverse());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// --- Production static file serving ---
+const distPath = join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// Handle SPA routing
+app.get(/.*/, (req, res) => {
+  if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
+  res.sendFile(join(distPath, 'index.html'));
 });
 
 app.listen(port, () => {

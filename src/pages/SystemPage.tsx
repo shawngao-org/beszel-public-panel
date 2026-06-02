@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Loader2, Cpu, Network, Info, Server, Globe, Thermometer, Database, Activity } from 'lucide-react'
+import { ArrowLeft, Loader2, Cpu, Network, Info, Server, Thermometer, Database, Activity } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -79,44 +79,59 @@ export function SystemPage() {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
+  const fetchData = async (isRefresh = false) => {
+    try {
+      if (!isRefresh) {
         setLoading(true);
         setShowCharts(false);
-        
-        let currentSystem = system;
-        if (!currentSystem) {
-          const sResp = await fetch(`${API_URL}/api/systems`);
-          const sData = await sResp.json();
-          currentSystem = sData.find((s: System) => s.id === id);
-          if (currentSystem) setSystem(currentSystem);
-          else throw new Error('System not found');
-        }
+      }
+      
+      let currentSystem = system;
+      if (!currentSystem) {
+        const sResp = await fetch(`${API_URL}/api/systems`);
+        const sData = await sResp.json();
+        currentSystem = sData.find((s: System) => s.id === id);
+        if (currentSystem) setSystem(currentSystem);
+        else throw new Error('System not found');
+      } else if (isRefresh) {
+        // Update the system object itself to get latest current stats
+        const sResp = await fetch(`${API_URL}/api/systems`);
+        const sData = await sResp.json();
+        const updatedSystem = sData.find((s: System) => s.id === id);
+        if (updatedSystem) setSystem(updatedSystem);
+      }
 
-        const hResp = await fetch(`${API_URL}/api/systems/${id}/history`);
-        if (!hResp.ok) throw new Error('Failed to fetch history');
-        const hData = await hResp.json();
-        setHistory(hData);
-        
-        // Use a longer double-pass strategy
-        // 1. Loading still true, but Recharts starts rendering in the background
+      const hResp = await fetch(`${API_URL}/api/systems/${id}/history`);
+      if (!hResp.ok) throw new Error('Failed to fetch history');
+      const hData = await hResp.json();
+      setHistory(hData);
+      
+      if (!isRefresh) {
         setTimeout(() => {
           setLoading(false);
-          // 2. Short fade-in delay to ensure SVG has painted
           setTimeout(() => {
             setShowCharts(true);
           }, 100);
         }, 800);
-
-      } catch (err: any) {
-        console.error('Fetch error:', err);
+      }
+    } catch (err: any) {
+      console.error('Fetch error:', err);
+      if (!isRefresh) {
         setError(err.message || 'Failed to load data');
         setLoading(false);
       }
     }
+  };
 
+  useEffect(() => {
     fetchData();
+
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [id, API_URL]);
 
   if (!system && loading) {
