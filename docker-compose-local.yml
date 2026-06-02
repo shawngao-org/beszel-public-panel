@@ -1,0 +1,15 @@
+services:
+  beszel-public-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: beszel-public-panel
+    ports:
+      - "3001:3001"
+    environment:
+      - VITE_PB_URL=${VITE_PB_URL}
+      - VITE_PB_USER=${VITE_PB_USER}
+      - VITE_PB_PASS=${VITE_PB_PASS}
+      - VITE_API_URL=http://localhost:3001
+      - VITE_HIDE_IP=${VITE_HIDE_IP:-false}
+    restart: unless-stopped
