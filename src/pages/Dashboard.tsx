@@ -39,7 +39,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const API_URL = (window as any).__CONFIG__?.VITE_API_URL || import.meta.env.VITE_API_URL || '';
 
   const fetchSystems = async () => {
     try {
